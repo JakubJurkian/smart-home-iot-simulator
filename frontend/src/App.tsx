@@ -671,17 +671,87 @@ const DeviceCard = ({
     ? "bg-yellow-50 border-yellow-200"
     : "bg-white border-gray-200";
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(device.name);
+
+  const handleSaveName = async () => {
+    if (!editedName.trim()) return;
+
+    try {
+      const res = await fetch(`${API_URL}/devices/${device.id}/name`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editedName),
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to rename");
+
+      // Force page refresh or ideally update parent state.
+      // For simplicity in this structure, we just exit edit mode and let SignalR or refresh handle it,
+      // OR strictly speaking, we should have an 'onUpdate' prop from App.tsx.
+      // BUT, to make it look responsive immediately:
+      device.name = editedName; // Direct mutation for instant UI feedback (dirty but works for small apps)
+      setIsEditing(false);
+    } catch (err) {
+      console.log(err);
+      alert("Error renaming device");
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedName(device.name);
+    setIsEditing(false);
+  };
+
   return (
     <div
       className={`relative p-5 rounded-xl border shadow-sm transition-all duration-300 hover:shadow-md ${bgClass}`}
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 truncate pr-6">
-          {isBulb ? "💡" : "🌡️"} <span className="truncate">{device.name}</span>
-        </h3>
-        {/* ACTION BUTTONS CONTAINER */}
-        <div className="flex gap-1">
-          {/* NEW: LOGS BUTTON */}
+        {/* HEADER: NAME OR INPUT */}
+        <div className="flex-1 pr-2">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="w-full p-1 border border-blue-300 rounded text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              <button
+                onClick={handleSaveName}
+                className="text-green-600 hover:bg-green-100 p-1 rounded cursor-pointer"
+                title="Save"
+              >
+                ✓
+              </button>
+              <button
+                onClick={handleCancel}
+                className="text-red-500 hover:bg-red-100 p-1 rounded cursor-pointer"
+                title="Cancel"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 truncate group">
+              <span>{isBulb ? "💡" : "🌡️"}</span>
+              <span className="truncate" title={device.name}>
+                {device.name}
+              </span>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-opacity p-1 text-sm cursor-pointer"
+                title="Rename"
+              >
+                ✏️
+              </button>
+            </h3>
+          )}
+        </div>
+
+        <div className="flex gap-1 shrink-0 ml-2">
           <button
             onClick={() => onOpenLogs(device)}
             className="cursor-pointer text-gray-400 hover:text-blue-500 transition-colors p-1"
@@ -689,8 +759,6 @@ const DeviceCard = ({
           >
             🛠️
           </button>
-
-          {/* DELETE BUTTON */}
           <button
             onClick={() => onDelete(device.id)}
             className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors p-1"
@@ -713,8 +781,9 @@ const DeviceCard = ({
           </button>
         </div>
       </div>
+
       <p className="text-sm text-gray-500 mb-1 truncate">
-        📍 {device.room?.name || "Unknown Room"}
+        📍 {device.room?.name || "Unknown"}
       </p>
       <p className="text-xs text-gray-400 font-mono mb-4">
         ID: {device.id.slice(0, 8)}...
@@ -756,18 +825,43 @@ const RoomManager = ({
   rooms,
   onAdd,
   onDelete,
+  onRename,
 }: {
   rooms: Room[];
   onAdd: (name: string) => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, newName: string) => void;
 }) => {
   const [newRoomName, setNewRoomName] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Stan do edycji: trzymamy ID edytowanego pokoju i jego tymczasową nazwę
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRoomName.trim()) return;
     onAdd(newRoomName);
     setNewRoomName("");
+  };
+
+  // Rozpoczęcie edycji (kliknięcie w nazwę lub ołówek)
+  const startEditing = (room: Room) => {
+    setEditingId(room.id);
+    setEditName(room.name);
+  };
+
+  // Zapisanie edycji (Enter lub przycisk)
+  const saveEdit = () => {
+    if (editingId && editName.trim()) {
+      onRename(editingId, editName);
+      setEditingId(null);
+    }
+  };
+
+  // Anulowanie (Esc)
+  const cancelEdit = () => {
+    setEditingId(null);
   };
 
   return (
@@ -776,8 +870,7 @@ const RoomManager = ({
         🏠 Manage Rooms
       </h3>
 
-      {/* Existing Rooms List */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-3 mb-6">
         {rooms.length === 0 && (
           <span className="text-gray-400 text-sm italic">
             No rooms created yet.
@@ -787,25 +880,69 @@ const RoomManager = ({
         {rooms.map((room) => (
           <div
             key={room.id}
-            className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 border border-blue-100"
+            className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border border-blue-100 shadow-sm transition-all hover:shadow-md"
           >
-            {room.name}
-            <button
-              onClick={() => onDelete(room.id)}
-              className="text-blue-400 hover:text-red-500 font-bold leading-none cursor-pointer"
-              title="Delete Room"
-            >
-              &times;
-            </button>
+            {editingId === room.id ? (
+              <div className="flex items-center gap-1">
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit();
+                    if (e.key === "Escape") cancelEdit();
+                  }}
+                  className="w-24 p-1 text-xs border border-blue-300 rounded bg-white focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  onClick={saveEdit}
+                  className="text-green-600 hover:text-green-800 cursor-pointer"
+                >
+                  ✓
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <>
+                <span
+                  onDoubleClick={() => startEditing(room)}
+                  className="cursor-pointer select-none"
+                  title="Double click to edit"
+                >
+                  {room.name}
+                </span>
+
+                <button
+                  onClick={() => startEditing(room)}
+                  className="text-blue-300 hover:text-blue-600 cursor-pointer ml-1"
+                >
+                  ✏️
+                </button>
+
+                <span className="text-blue-200">|</span>
+
+                <button
+                  onClick={() => onDelete(room.id)}
+                  className="text-red-300 hover:text-red-500 font-bold leading-none cursor-pointer text-lg"
+                  title="Delete Room & All Devices inside"
+                >
+                  &times;
+                </button>
+              </>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Add New Room Form */}
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleAddSubmit} className="flex gap-2 border-t pt-4">
         <input
           type="text"
-          placeholder="New Room Name (e.g. Kitchen)"
+          placeholder="New Room Name..."
           value={newRoomName}
           onChange={(e) => setNewRoomName(e.target.value)}
           className="p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64"
@@ -1020,15 +1157,35 @@ function App() {
     });
   };
 
+  const handleRenameRoom = (id: string, newName: string) => {
+    fetch(`${API_URL}/rooms/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newName),
+      credentials: "include",
+    }).then((res) => {
+      if (res.ok) fetchRooms();
+      else alert("Failed to rename room");
+    });
+  };
+
   const handleDeleteRoom = (id: string) => {
-    if (!confirm("Delete room? Devices in this room might get orphaned!"))
+    // Zmieniony komunikat
+    if (
+      !confirm(
+        "⚠️ WARNING: Deleting this room will also DELETE ALL DEVICES inside it.\n\nAre you sure?"
+      )
+    )
       return;
+
     fetch(`${API_URL}/rooms/${id}`, {
       method: "DELETE",
       credentials: "include",
-    }).then(() => fetchRooms());
+    }).then(() => {
+      fetchRooms();
+      fetchDevices();
+    });
   };
-
   useEffect(() => {
     if (!user) return;
 
@@ -1127,6 +1284,7 @@ function App() {
               rooms={rooms}
               onAdd={handleAddRoom}
               onDelete={handleDeleteRoom}
+              onRename={handleRenameRoom}
             />
 
             <DeviceForm onAdd={handleAdd} rooms={rooms} />
