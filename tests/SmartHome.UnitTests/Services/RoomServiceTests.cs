@@ -33,8 +33,6 @@ public class RoomServiceTests
         _roomService.AddRoom(userId, roomName);
 
         // ASSERT
-        // Sprawdzamy, czy metoda Add w repozytorium została wywołana RAZ
-        // i czy przekazany obiekt Room ma dobrą nazwę i UserId.
         _roomRepoMock.Verify(repo => repo.Add(It.Is<Room>(r =>
             r.Name == roomName &&
             r.UserId == userId
