@@ -1,50 +1,63 @@
-# 🏠 Smart Home Simulator
+# Smart Home Simulator - Testy
 
-A full-stack IoT simulation platform built with .NET 10, React, and MQTT.
+### Autor: Jakub Jurkian
 
-## 🛠 Tech Stack
+### Grupa: 2
 
-- **Backend:** C# .NET 10 Web API (Clean Architecture)
-- **Frontend:** React + TypeScript + Vite + Tailwind CSS v4
-- **Infrastructure:** MQTT Broker (Mosquitto), Docker Compose
-- **Communication:** WebSockets (Frontend ↔ Broker) & TCP (Backend ↔ Broker)
+## Opis projektu
 
-## 📋 Prerequisites
+Projekt Smart Home Simulator to kompleksowy system zarządzania inteligentnym domem z interfejsem webowym.
+Obejmuje backend w .NET, frontend w React/TypeScript oraz komunikację MQTT.
+System posiada logikę użytkownika oraz umożliwia zarządzanie urządzeniami, pomieszczeniami i logami konserwacji.
 
-Before running the project, ensure you have the following installed:
-1.  **Docker Desktop** (Make sure it is running!)
-2.  **.NET 10 SDK**
-3.  **Node.js** (v18 or newer)
+## Uruchomienie testów
 
-## 🚀 Getting Started
+### Testy jednostkowe
 
-Follow these steps in order to start the simulator.
-
-### 1. Start the Infrastructure (MQTT Broker)
-Open a terminal in the root folder and run:
 ```bash
-docker compose up -d
+dotnet test tests/SmartHome.UnitTests/SmartHome.UnitTests.csproj
 ```
-This spins up the Mosquitto Broker on ports 1883 (TCP) and 9001 (WebSockets).
 
-### 2. Start the Backend (API)
-Open a new terminal in the root folder:
-```bash
-cd backend/src/SmartHome.Api
-dotnet run
-```
-API will be available at http://localhost:5xxx
+### Testy integracyjne
 
-### 3. Start the Frontend (Dashboard)
-Open a new terminal in the root folder:
 ```bash
-cd frontend
-npm run dev
+dotnet test tests/SmartHome.IntegrationTests/SmartHome.IntegrationTests.csproj
 ```
-Dashboard will be available at http://localhost:5173
 
-### 🛑 Stopping the Infrastructure
-To stop the Docker containers and save resources:
+### Testy BDD (Reqnroll)
+
 ```bash
-docker compose down
+dotnet test tests/SmartHome.BDDTests/SmartHome.BDDTests.csproj
 ```
+
+### Testy wydajnościowe
+
+```bash
+dotnet test tests/SmartHome.PerformanceTests/SmartHome.PerformanceTests.csproj
+```
+
+### Wszystkie testy
+
+```bash
+dotnet test
+```
+
+## Pipeline CI/CD
+
+Pipeline GitHub Actions uruchamia się automatycznie przy każdym push i pull request do gałęzi main.
+
+### Ręczne uruchomienie pipeline
+
+Przejdź do zakładki Actions w repozytorium GitHub
+Wybierz workflow ".NET CI"
+Kliknij Run workflow
+
+### Lokalne uruchomienie z Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+## Raport pokrycia kodu
+
+Po uruchomieniu testów raport pokrycia znajduje się w katalogu coveragereport/index.html.
