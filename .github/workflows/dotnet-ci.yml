@@ -54,7 +54,7 @@ jobs:
             # Try to fetch rooms. Even 401 or empty json means the server IS UP.
             # We use -s (silent) and check exit code.
             if curl -s http://localhost:5187/api/rooms > /dev/null; then
-              echo "API started successfully."
+              echo "API started successfully"
               exit 0
             fi
             echo "Waiting for API... ($i/60)"
