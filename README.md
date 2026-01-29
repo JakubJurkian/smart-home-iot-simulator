@@ -42,6 +42,14 @@ dotnet test tests/SmartHome.PerformanceTests/SmartHome.PerformanceTests.csproj
 dotnet test
 ```
 
+### Test coverage
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+
+reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html -classfilters:"-SmartHome.Api.BackgroundServices.TcpSmartHomeServer;-SmartHome.Infrastructure.Migrations.*"
+```
+
 ## Pipeline CI/CD
 
 Pipeline GitHub Actions uruchamia się automatycznie przy każdym push i pull request do gałęzi main.
