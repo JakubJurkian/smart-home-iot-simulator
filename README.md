@@ -130,10 +130,4 @@ Pipeline GitHub Actions uruchamia się automatycznie przy każdym push i pull re
 
 1. Przejdź do zakładki **Actions** w repozytorium GitHub
 2. Wybierz workflow **".NET CI"**
-3. Kliknij **Run workflow**
-
-### Lokalne uruchomienie z Docker Compose
-
-```bash
-docker-compose up -d
-```
+3. Kliknij **Run Workflow**
